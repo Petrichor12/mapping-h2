@@ -19,7 +19,7 @@ def print_basic_results(df):
     print('Cheapest medium: ' + str(cheapest_medium))
     print('Cheaper electricity: ' + str(cheapest_elec))
 
-    return min_cost, mindex
+    return min_cost, mindex, cheapest_source, cheapest_medium, cheapest_elec
 
 
 def get_path(df, end_plant_tuple, centralised, pipeline):
@@ -184,17 +184,17 @@ def get_path(df, end_plant_tuple, centralised, pipeline):
                            df.at[mindex, 'H2 Gas Cost']]
     if np.nanmin(total_total_options) == df.at[mindex, 'NH3 Cost']:
         if nh3 == 'NH3 Ship':
-            final_path = nh3_start + ' + Ship + ' + nh3_end
+            final_path = nh3_start + ' Ship ' + nh3_end
         else:
             final_path = nh3
     elif np.nanmin(total_total_options) == df.at[mindex, 'LOHC Cost']:
         if lohc == 'LOHC Ship':
-            final_path = lohc_start + ' + Ship + ' + lohc_end
+            final_path = lohc_start + ' Ship ' + lohc_end
         else:
             final_path = lohc
     elif np.nanmin(total_total_options) == df.at[mindex, 'H2 Liq Cost']:
         if h2_liq == 'H2 Liq Ship':
-            final_path = h2_liq_start + ' + Ship + ' + h2_liq_end
+            final_path = h2_liq_start + ' Ship ' + h2_liq_end
         else:
             final_path = h2_liq
     elif np.nanmin(total_total_options) == df.at[mindex, 'H2 Gas Cost']:
