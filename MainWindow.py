@@ -3,7 +3,7 @@ import ui_library
 import ParameterSet
 import mc_main
 from PyQt6.QtWidgets import *
-from PyQt6.QtGui import *
+from PyQt6.QtGui import QDoubleValidator, QIntValidator
 from PyQt6.QtCore import *
 import math
 import DisplayMap
@@ -13,17 +13,16 @@ class UiWindow(QMainWindow):
     def __init__(self):
         super(UiWindow, self).__init__()
         self.setWindowTitle("H2 mapping UI")
-        self.setGeometry(500, 200, 600, 400)
+        self.setGeometry(500, 500, 650, 500)
 
         self.window = QWidget()
-        self.window.setStyleSheet(" background-color: Linen ")
-        # self.window.setStyleSheet(" QMainWindow.separator { background-color: red; width: 30; height: 30px } " )
+        self.window.setStyleSheet(" background-color: MintCream ")
 
         self.grid = QGridLayout()
 
         # create groupbox for the coordinates, labels for latitude and longitude
         # as well as input-boxes for latitude and longitude values
-        self.coord_groupbox = QGroupBox("coordinates")
+        self.coord_groupbox = QGroupBox("Coordinates")
         self.coord_groupbox.setStyleSheet("QGroupBox { border-style: solid; border-width: 0.5px; "
                                           "border-radius: 5px; "
                                           "padding-top: 10px; padding-bottom: 3px } ")
@@ -31,10 +30,12 @@ class UiWindow(QMainWindow):
         self.coord_groupbox_layout = QVBoxLayout()
         self.coord_groupbox.setLayout(self.coord_groupbox_layout)
 
-        self.long_label = QLabel("longitude :")
-        self.lat_label = QLabel("latitude :")
+        self.long_label = QLabel("Longitude :")
+        self.lat_label = QLabel("Latitude :")
         self.long_lineedit = QLineEdit()
+        self.long_lineedit.setPlaceholderText("Enter longitudinal value")
         self.lat_lineedit = QLineEdit()
+        self.lat_lineedit.setPlaceholderText("Enter latitudinal value")
 
         # put longitude and latitude labels into horizontal layouts together with their lineedits
         self.long_hbox = QHBoxLayout()
@@ -49,7 +50,7 @@ class UiWindow(QMainWindow):
         self.coord_groupbox_layout.addLayout(self.long_hbox)
 
         # creates the year groupbox and a combo box with the options of choosing 2020, 2030, 2040, 2050
-        self.year_groupbox = QGroupBox("year")
+        self.year_groupbox = QGroupBox("Year")
         self.year_groupbox.setStyleSheet("QGroupBox { border-style: solid; border-width: 0.5px; "
                                          "border-radius: 5px; padding-top: 10px; padding-bottom: 3px }")
         self.year_groupbox_layout = QVBoxLayout()
@@ -67,7 +68,7 @@ class UiWindow(QMainWindow):
 
         # creates the yearly hydrogen demand label and a spinbox that takes values between 1 and 1 million
         # the value can be changed in steps of 10 via the arrows; arrange it in a HBox layout with the label
-        self.hhdemand_label = QLabel("yearly hydrogen demand (in kilotons) :")
+        self.hhdemand_label = QLabel("Yearly hydrogen demand (in kilotons) :")
         self.hhdemand_spinbox = QDoubleSpinBox()
         self.hhdemand_spinbox.setRange(0, 1000000)
         self.hhdemand_spinbox.setSingleStep(10)
@@ -76,9 +77,9 @@ class UiWindow(QMainWindow):
         self.hhdemand_layout.addWidget(self.hhdemand_spinbox)
 
         # create combobox with electrolyzer options
-        self.electro_label = QLabel("electrolyzer type :")
+        self.electro_label = QLabel("Electrolyzer type :")
         self.electro_combo = QComboBox()
-        self.electro_combo.addItems(["soe", "alkaline", "pem"])
+        self.electro_combo.addItems(["alkaline", "solid oxide electrolyzer cell", "polymer electrolyte membrane"])
 
         # put label and combo box into a layout
         self.electro_layout = QHBoxLayout()
@@ -86,23 +87,23 @@ class UiWindow(QMainWindow):
         self.electro_layout.addWidget(self.electro_combo)
 
         # creates a checkbox to decide whether to allow central conversion facilities
-        self.conversion_checkbox = QCheckBox("allow central conversion")
+        self.conversion_checkbox = QCheckBox("Allow central conversion")
 
         self.demand_conversion_groupbox_layout.addLayout(self.hhdemand_layout)
         self.demand_conversion_groupbox_layout.addLayout(self.electro_layout)
         self.demand_conversion_groupbox_layout.addWidget(self.conversion_checkbox)
 
         # create a groupbox for the pipeline related widgets
-        self.pipe_groupbox = QGroupBox("pipelines")
+        self.pipe_groupbox = QGroupBox("Pipelines")
         self.pipe_groupbox.setStyleSheet("QGroupBox { border-style: solid; border-width: 0.5px; "
                                          "border-radius: 5px; padding-top: 10px } ")
         self.pipe_groupbox_layout = QVBoxLayout()
 
         # creates a checkbox to decide whether to allow pipelines as transport medium or not
-        self.pipe_checkbox = QCheckBox("allow pipelines")
+        self.pipe_checkbox = QCheckBox("Allow pipelines")
 
         # creates label and input box for
-        self.maxpipe_label = QLabel("maximum pipeline length :")
+        self.maxpipe_label = QLabel("Maximum pipeline length :")
         self.maxpipe_spinbox = QSpinBox()
         self.maxpipe_spinbox.setRange(0, 20000)
         self.maxpipe_spinbox.setSingleStep(10)
@@ -115,18 +116,18 @@ class UiWindow(QMainWindow):
         self.pipe_groupbox.setLayout(self.pipe_groupbox_layout)
 
         # groupbox to contain the monte carlo widgets
-        self.mc_widgets_groupbox = QGroupBox("monte-carlo-simulation")
+        self.mc_widgets_groupbox = QGroupBox("Monte Carlo simulation")
         self.mc_widgets_groupbox.setStyleSheet("QGroupBox { border-style: solid; border-width: 0.5px; "
                                                "border-radius: 5px; padding-top: 10px } ")
         self.mc_widgets_groupbox_layout = QVBoxLayout()
 
         # creates a checkbox with the option to toggle between single run and monte carlo sim
         self.mc_checkbox = QCheckBox()
-        self.mc_checkbox.setText("run as monte-carlo-simulation")
+        self.mc_checkbox.setText("Run as monte-carlo-simulation")
 
         # creates optional parameter inputs for monte carlo sim
         # create label and lineedit to put in iterations
-        self.iter_label = QLabel("iterations: ")
+        self.iter_label = QLabel("Iterations: ")
         self.iter_lineedit = QLineEdit()
         self.iter_lineedit.setPlaceholderText("Enter the number of iterations")
 
@@ -144,13 +145,24 @@ class UiWindow(QMainWindow):
         self.results_textbox.setReadOnly(True)
         self.results_textbox.setAcceptRichText(True)
         self.results_textbox.setStyleSheet("QTextEdit { border-style: solid; border-width: 0.5px; "
-                                           "border-radius: 5px; background-color: Azure  } ")
+                                           "border-radius: 5px } ")
+        self.results_textbox.setText("Before starting a calculation please enter the coordinates of the desired "
+                                     "end location, the yearly hydrogen demand at the site and the rest of the "
+                                     "parameters. If you want the model to run as a Monte-Carlo simulation check "
+                                     "the corresponding box and enter the number of iterations. Please note that "
+                                     "the higher the number of iterations the higher the computation time will be. "
+                                     "\nIf you are satisfied with your inputs you can click on the 'run model' button "
+                                     "to start the calculation. The program window will become unresponsive for the "
+                                     "duration of the model run. Running times can vary between 15 and 60 minutes for "
+                                     "a single run and up to 16 hours for a Monte Carlo run with 1000 iterations."
+                                     "Depending on the number of iterations and the computer hardware used "
+                                     "these numbers may vary. ")
 
         # creates a button to start the model run and to open the sidebar for mapping of results
-        self.run_button = QPushButton("run model")
-        self.run_button.setStyleSheet("QPushButton { background-color: LightBlue  } ")
-        self.map_dialog_button = QPushButton("open 'DisplayMap' sidebar")
-        self.map_dialog_button.setStyleSheet("QPushButton { background-color: Khaki} ")
+        self.run_button = QPushButton("Run Model")
+        self.run_button.setStyleSheet("QPushButton { background-color: LightBlue } ")
+        self.map_dialog_button = QPushButton("Open Visualisation Sidebar")
+        self.map_dialog_button.setStyleSheet("QPushButton { background-color: LightBlue } ")
         self.run_map_button_layout = QVBoxLayout()
         self.run_map_button_layout.addWidget(self.run_button)
         self.run_map_button_layout.addWidget(self.map_dialog_button)
@@ -208,16 +220,23 @@ class UiWindow(QMainWindow):
         # when map dialog button is pressed add a docked widget that allows displaying a map
         self.map_dialog_button.clicked.connect(self.load_new_mapwidget)
 
+        # validation of the lineedit inputs is triggered by the editing finished signal
+        self.lat_lineedit.editingFinished.connect(self.validate_latitude)
+        self.long_lineedit.editingFinished.connect(self.validate_longitude)
+        self.iter_lineedit.editingFinished.connect(self.validate_iterations)
+
     def on_mc_checkbox(self):
+        """Shows or hides the Monte-Carlo specific parameter input fields dependent on whether the
+        mc-checkbox is checked."""
         if self.mc_checkbox.isChecked():
             self.iter_label.show()
             self.iter_lineedit.show()
-
         else:
             self.iter_label.hide()
             self.iter_lineedit.hide()
 
     def on_pipeline_checkbox(self):
+        """Shows or hides the maximum pipeline length selector dependent on whether pipelines are allowed."""
         if self.pipe_checkbox.isChecked():
             self.maxpipe_label.show()
             self.maxpipe_spinbox.show()
@@ -226,9 +245,10 @@ class UiWindow(QMainWindow):
             self.maxpipe_spinbox.hide()
 
     def single_or_mc(self):
+        """This method checks if either a single or a mc run is to be computed. Then runs the model and
+        gives some short written results in the textbox."""
         if self.mc_checkbox.isChecked():
             self.set_iterations()
-            # total_cost, generation_cost, solar_cost, wind_cost = self.mc_computing.run_mc_model()
             cheapest_location_df = self.mc_computing.run_mc_model()
             self.results_textbox.setText("Latitude: " + str(cheapest_location_df.iloc[0]['Latitude']))
             self.results_textbox.append("Longitude: " + str(cheapest_location_df.iloc[0]['Longitude']))
@@ -242,7 +262,6 @@ class UiWindow(QMainWindow):
             min_cost, mindex, cheapest_source, cheapest_medium, cheapest_elec, final_path = self.computing.run_single_model()
             rounded_cost = self.round_half_up(min_cost, 2)
             self.results_textbox.setText(str(rounded_cost) + "€/kg")
-            self.results_textbox.append("Index: " + str(mindex))
             self.results_textbox.append("Cheapest source location: " + str(cheapest_source))
             self.results_textbox.append("Cheapest transport medium: " + str(cheapest_medium))
             self.results_textbox.append("Cheaper electricity: " + str(cheapest_elec))
@@ -294,20 +313,108 @@ class UiWindow(QMainWindow):
     def set_elec_type(self):
         electrolyzer_type = self.electro_combo.currentText()
         print("The electrolyzer type was set to: " + electrolyzer_type)
-        self.parameter_set.electrolyzer_type = electrolyzer_type
+        if electrolyzer_type == "alkaline":
+            self.parameter_set.electrolyzer_type = "alkaline"
+        elif electrolyzer_type == "solid oxide electrolyzer cell":
+            self.parameter_set.electrolyzer_type = "SOEC"
+        else:
+            self.parameter_set.electrolyzer_type = "PEM"
 
     def load_new_mapwidget(self):
-        self.display_map = QDockWidget("Load up a map")
+        """This Method creates a new docked 'Visualisation' Widget"""
+
+        self.display_map = QDockWidget("Visualisation sidebar")
         self.display_map.setStyleSheet("QDockWidget { "
                                        "width: auto; "
-                                       "background-color: HoneyDew }"
+                                       "background-color: MintCream }"
                                        "QDockWidget.title { "
                                        "padding-right: 3px} ")
-        self.file_dialogue = DisplayMap.fileselection()
+        self.file_dialogue = DisplayMap.Visualizing()
         self.file_dialogue_layout = QHBoxLayout()
         self.file_dialogue.setLayout(self.file_dialogue_layout)
         self.display_map.setWidget(self.file_dialogue)
         self.addDockWidget(Qt.DockWidgetArea.RightDockWidgetArea, self.display_map)
+
+    def validate_latitude(self):
+        """Validation method to check if the user input in the Latitude LineEdit is between bounds."""
+
+        if len(self.lat_lineedit.text()) == 0:
+            self.lat_lineedit.setStyleSheet("background-color: Linen")
+        else:
+            validation_rule = QDoubleValidator(-90, 90, 100)
+            validation_rule.setNotation(QDoubleValidator.Notation.StandardNotation)
+            locale = QLocale("en")
+            validation_rule.setLocale(locale)
+
+            print(validation_rule.validate(self.lat_lineedit.text(), 1))
+
+            if validation_rule.validate(self.lat_lineedit.text(), 1)[0] == QDoubleValidator.State.Acceptable:
+                self.lat_lineedit.setStyleSheet("background-color: LightGreen")
+            else:
+                self.lat_lineedit.setStyleSheet("background-color: Crimson")
+                self.dialog = QMessageBox()
+                self.dialog.setWindowTitle("Please enter a valid latitudinal value")
+                self.dialog.setText("The latitudinal value can lie between -90° and 90°. "
+                                    "\nSeparate the decimal values via a '.' (dot)." )
+                button = self.dialog.exec()
+
+                if button == QMessageBox.StandardButton.Ok:
+                    print("Ok!")
+                    self.lat_lineedit.setStyleSheet("background-color: Linen")
+
+    def validate_longitude(self):
+        """Validation method to check if the user input in the Longitude LineEdit is between bounds."""
+
+        if len(self.long_lineedit.text()) == 0:
+            self.long_lineedit.setStyleSheet("background-color: Linen")
+        else:
+            validation_rule = QDoubleValidator(-180, 180, 100)
+            validation_rule.setNotation(QDoubleValidator.Notation.StandardNotation)
+            locale = QLocale("en")
+            validation_rule.setLocale(locale)
+
+            print(validation_rule.validate(self.long_lineedit.text(), 2))
+
+            if validation_rule.validate(self.long_lineedit.text(), 2)[0] == QDoubleValidator.State.Acceptable:
+                self.long_lineedit.setStyleSheet("background-color: Lightgreen")
+            else:
+                self.long_lineedit.setStyleSheet("background-color: Crimson")
+                self.dialog = QMessageBox()
+                self.dialog.setWindowTitle("Please enter a valid longitudinal value")
+                self.dialog.setText("The longitudinal value can lie between -180° and 180°. "
+                                    "\nSeparate the decimal values via a '.' (dot)." )
+                button = self.dialog.exec()
+
+                if button == QMessageBox.StandardButton.Ok:
+                    print("Ok!")
+                    self.long_lineedit.setStyleSheet("background-color: Linen")
+
+    def validate_iterations(self):
+        """Validation method to check if the user input in the iterations LineEdit is between bounds."""
+
+        if len(self.iter_lineedit.text()) == 0:
+            self.iter_lineedit.setStyleSheet("background-color: Linen")
+        else:
+            validation_rule = QIntValidator(1, 10000)
+            # locale = QLocale("en")
+            # validation_rule.setLocale(locale)
+
+            print(validation_rule.validate(self.iter_lineedit.text(), 1))
+
+            if validation_rule.validate(self.iter_lineedit.text(), 1)[0] == QIntValidator.State.Acceptable:
+                self.iter_lineedit.setStyleSheet("background-color: LightGreen")
+            else:
+                self.iter_lineedit.setStyleSheet("background-color: Crimson")
+                self.dialog = QMessageBox()
+                self.dialog.setWindowTitle("Please enter a valid iteration value")
+                self.dialog.setText("The iterations can lie between 1 and 10000 to ensure "
+                                    "a reasonable computation time.")
+                button = self.dialog.exec()
+
+                if button == QMessageBox.StandardButton.Ok:
+                    print("Ok!")
+                    self.iter_lineedit.clear()
+                    self.iter_lineedit.setStyleSheet("background-color: Linen")
 
     @staticmethod
     def round_half_up(n, decimals=0):

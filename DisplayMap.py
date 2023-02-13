@@ -1,70 +1,202 @@
 import io
-import os
+import sys, os
+from pathlib import Path
 import geopandas as gpd
-import shapefile as shp  # Requires the pyshp package
+import shapefile as shp
 import plotly
 import plotly.graph_objects as go
 import openrouteservice
 from openrouteservice import convert
 import folium
+import timeit
 from PyQt6.QtWebEngineWidgets import *
 from PyQt6.QtWidgets import *
 from print_results import *
-
 sys.path.append("/shapefile_to_network/main/convertor")
 sys.path.append("/shapefile_to_network/main/shortest_paths")
-
 from shapefile_to_network.main.convertor.GraphConvertor import GraphConvertor
 from shapefile_to_network.main.shortest_paths.ShortestPath import ShortestPath
-
 from shapely import speedups
 
 speedups.disable()
 
 
-# this application opens a dialog in which a file from results can be selected
-class fileselection(QWidget):
+class Visualizing(QWidget):
+    """this application opens a dialog in which a file from results can be selected"""
     def __init__(self, parent=None):
-        super(fileselection, self).__init__(parent)
+        super(Visualizing, self).__init__(parent)
 
         self.setGeometry(800, 500, 200, 100)
-        self.layout = QVBoxLayout()
-        self.b = QPushButton("select a .csv-file")
-        self.map_button = QPushButton("display map")
-        self.world_heatmap_button = QPushButton("display H2-price on world map")
+        window_layout = QVBoxLayout()
+        self.tabs = QTabWidget()
+        self.tabs.setStyleSheet("QTabWidget::pane {"
+                                "border: 1px solid black;"
+                                "background: MintCream }"
+                                
+                                "QTabWidget::tab-bar:top {"
+                                "top: 1px }"    
+                                
+                                "QTabWidget::tab-bar:bottom {"
+                                "bottom: 1px }"
 
-        self.world_heatmap_result_metric_label = QLabel(" Plot the following result metric :")
+                                "QTabWidget::tab-bar:left {"
+                                "right: 1px }"
+
+                                "QTabWidget::tab-bar:right {"
+                                "left: 1px} "
+ 
+                                "QTabBar::tab {"
+                                "border: 1px solid black }"
+
+                                "QTabBar::tab:selected {"
+                                "background: DarkSeaGreen }"
+
+                                "QTabBar::tab:!selected {"
+                                "background: LightSteelBlue }"
+
+                                "QTabBar::tab:!selected:hover {"
+                                "background: #999 }"
+
+                                "QTabBar::tab:top:!selected {"
+                                "margin-top: 3px }"
+
+                                "QTabBar::tab:bottom:!selected {"
+                                "margin-bottom: 3px }"
+
+                                "QTabBar::tab:top, QTabBar::tab:bottom {"
+                                "min-width: 8ex;"
+                                "margin-right: -1px;"
+                                "padding: 5px 10px 5px 10px }"
+
+                                "QTabBar::tab:top:selected {"
+                                "border-bottom-color: none }"
+
+                                "QTabBar::tab:bottom:selected {"
+                                "border-top-color: none }"
+
+                                "QTabBar::tab:top:last, QTabBar::tab:bottom:last,"
+                                "QTabBar::tab:top:only-one, QTabBar::tab:bottom:only-one {"
+                                "margin-right: 0 }"
+
+                                "QTabBar::tab:left:!selected {"
+                                "margin-right: 3px }"
+
+                                "QTabBar::tab:right:!selected {"
+                                "margin-left: 3px }"
+
+                                "QTabBar::tab:left, QTabBar::tab:right {"
+                                "min-height: 8ex;"
+                                "margin-bottom: -1px;"
+                                "padding: 10px 5px 10px 5px }"
+
+                                "QTabBar::tab:left:selected {"
+                                "border-left-color: none }"
+
+                                "QTabBar::tab:right:selected {"
+                                "border-right-color: none }"
+
+                                "QTabBar::tab:left:last, QTabBar::tab:right:last,"
+                                "QTabBar::tab:left:only-one, QTabBar::tab:right:only-one {"
+                                "margin-bottom: 0}")
+
+
+        self.tab1 = QWidget()
+        self.tab2 = QWidget()
+
+        # this ComboBox has to be
         self.world_heatmap_result_metric_combo = QComboBox()
         self.world_heatmap_result_metric_combo.addItems(['Total Cost per kg H2', 'Gen. cost per kg H2',
                                                          'Transport Cost per kg H2', 'Cheapest Medium'])
-        self.world_heatmap_result_metric_combo_layout = QHBoxLayout()
-        self.world_heatmap_result_metric_combo_layout.addWidget(self.world_heatmap_result_metric_label)
-        self.world_heatmap_result_metric_combo_layout.addWidget(self.world_heatmap_result_metric_combo)
+        self.tab1ui()
+        self.tab2ui()
 
-        self.layout.addWidget(self.b)
-        self.layout.addWidget(self.map_button)
-        self.layout.addLayout(self.world_heatmap_result_metric_combo_layout)
-        self.layout.addWidget(self.world_heatmap_button)
+        self.tabs.addTab(self.tab1, "Single Run")
+        self.tabs.addTab(self.tab2, "Monte Carlo Sim.")
 
-        self.b.clicked.connect(self.filedialog)
-        self.map_button.clicked.connect(self.display_map)
-        self.world_heatmap_button.clicked.connect(self.plot_world_results)
-
-        self.setWindowTitle("data selection demo")
-        self.setLayout(self.layout)
+        self.setWindowTitle("Data Visualisation")
         self.df = pd.DataFrame()
+        self.mc_df = pd.DataFrame()
+
+        window_layout.addWidget(self.tabs)
+        self.setLayout(window_layout)
+
+
+    def tab1ui(self):
+        self.tab1_layout = QVBoxLayout()
+        b = QPushButton("Select a .csv-file from the 'Results'-folder")
+        map_button = QPushButton("Display route on world map")
+        world_heatmap_button = QPushButton("display the selected metric on world map")
+
+        world_heatmap_result_metric_label = QLabel(" Plot the following result metric :")
+
+        world_heatmap_result_metric_combo_layout = QHBoxLayout()
+        world_heatmap_result_metric_combo_layout.addWidget(world_heatmap_result_metric_label)
+        world_heatmap_result_metric_combo_layout.addWidget(self.world_heatmap_result_metric_combo)
+
+        self.tab1_layout.addWidget(b)
+        self.tab1_layout.addWidget(map_button)
+        self.tab1_layout.addLayout(world_heatmap_result_metric_combo_layout)
+        self.tab1_layout.addWidget(world_heatmap_button)
+
+        b.clicked.connect(self.filedialog)
+        map_button.clicked.connect(self.display_map)
+        world_heatmap_button.clicked.connect(self.plot_world_results_single_run)
+
+        self.tab1.setLayout(self.tab1_layout)
+        self.tab1.setStyleSheet(
+            "QPushButton {background-color: DarkSeaGreen}"
+            "QComboBox {background-color: DarkSeaGreen;"
+            "padding: 2px 1px 2px 5px }"
+        )
+
+    def tab2ui(self):
+        self.tab2_layout = QVBoxLayout()
+        b = QPushButton("Select a .csv-file from the 'Results/mc'-folder")
+        world_heatmap_button = QPushButton("Display selected datafile on a world map")
+        self.tab2_layout.addWidget(b)
+        self.tab2_layout.addWidget(world_heatmap_button)
+
+        b.clicked.connect(self.mc_filedialog)
+        world_heatmap_button.clicked.connect(self.plot_world_results_mc)
+
+        self.tab2.setLayout(self.tab2_layout)
+
+        self.tab2.setStyleSheet(
+            "QPushButton {background-color: DarkSeaGreen}"
+        )
 
     def filedialog(self):
+        """A file dialog is created where it's possible to select a file in the 'Results' folder."""
         d = QFileDialog()
-        relpathtoresults = os.path.join(os.path.dirname(__file__), r'Results')
-        activefile = QFileDialog.getOpenFileName(d, "select csv", relpathtoresults)
+        active_file = QFileDialog.getOpenFileName(d, "select csv")
 
-        # getOpenFilename somehow returns a tuple, therefore we only access the first element
-        df = pd.read_csv(activefile[0])
-        pd.DataFrame.info(df)
-        self.df = df
+        if active_file[0] == '':
+            pass
+        else:
+            # getOpenFilename somehow returns a tuple, therefore we only access the first element
+            df = pd.read_csv(active_file[0])
+            pd.DataFrame.info(df)
+            self.df = df
+
+    def mc_filedialog(self):
+        mc_d = QFileDialog()
+
+        active_file = QFileDialog.getOpenFileName(mc_d, "select csv")
+
+        if active_file[0] == '':
+            pass
+        else:
+            df = pd.read_csv(active_file[0], header=None)
+            pd.DataFrame.info(df)
+            self.mc_df = df
 
     def display_map(self):
+        """This Method can display the resulting transport route for the cheapest production location.
+        Every combination of transport methods can be displayed. Trucking between two points is
+        computed via openrouteservice. A pipeline is visualised by a straight line, since they're
+        hypothetical in this model. Transport by ship can happen along a shipping network derived
+        from real shipping paths obtained from tracking vessels."""
+
         # finds the place of the cheapest cost and stores its location as a tuple
         # stores the desired location as a tuple (location is the same for all rows of the df)
         min_cost = min(self.df['Total Cost per kg H2'])
@@ -80,8 +212,8 @@ class fileselection(QWidget):
 
         graph_convertor_obj = GraphConvertor(input_file, output_dir)
 
-        # Call graph_convertor function to convert the input shapefile into road network and save the newly created shapefile
-        # into specifed output_dir along with list of nodes and edges in .csv files
+        # Call graph_convertor function to convert the input shapefile into road network and
+        # save the newly created shapefile into specifed output_dir along with list of nodes and edges in .csv files
         network = graph_convertor_obj.graph_convertor()
 
         edges = gpd.read_file(input_file)
@@ -94,8 +226,8 @@ class fileselection(QWidget):
 
         port_coords = self.create_port_coordinates(df_ports)
 
-        start_plant_tuple = (self.cheapest_source)
-        end_plant_tuple = (self.end_tuple)
+        start_plant_tuple = self.cheapest_source
+        end_plant_tuple = self.end_tuple
 
         start_plant_tuple = start_plant_tuple[::-1]
         end_plant_tuple = end_plant_tuple[::-1]
@@ -418,11 +550,11 @@ class fileselection(QWidget):
 
         w = QWebEngineView()
         w.setHtml(data.getvalue().decode())
-        self.layout.addWidget(w)
+        self.tab1_layout.addWidget(w)
         w.resize(640, 480)
         w.show()
 
-    def plot_world_results(self):
+    def plot_world_results_single_run(self):
         """Plots world map showing various cost metrics for producing H2."""
         data = self.df
         desired_metric = self.world_heatmap_result_metric_combo.currentText()
@@ -487,7 +619,7 @@ class fileselection(QWidget):
 
             plot_widget = QWebEngineView()
             plot_widget.setHtml(html)
-            self.layout.addWidget(plot_widget)
+            self.tab1_layout.addWidget(plot_widget)
             plot_widget.resize(800, 600)
             plot_widget.show()
 
@@ -547,9 +679,76 @@ class fileselection(QWidget):
 
             plot_widget = QWebEngineView()
             plot_widget.setHtml(html)
-            self.layout.addWidget(plot_widget)
+            self.tab1_layout.addWidget(plot_widget)
             plot_widget.resize(800, 600)
             plot_widget.show()
+
+    def plot_world_results_mc(self):
+
+        list_locations = pd.read_csv("Data/locationslist.csv")
+        data = self.mc_df.mean()
+        dataframes = [list_locations[['Latitude', 'Longitude']], data]
+
+        x = pd.concat(dataframes, axis=1)
+
+        fig = go.Figure(data=go.Scattergeo(
+            lat=x.loc[:, 'Latitude'],
+            lon=x.loc[:, 'Longitude'],
+            mode='markers',
+            text=round(x.iloc[:, 2], 2),
+            marker=dict(
+                color=x.iloc[:, 2],
+                size=3,
+                colorscale='Portland',
+                # reversescale = True,
+                colorbar=dict(
+                    titleside="right",
+                    outlinecolor="rgba(68, 68, 68, 0)",
+                    ticks="outside",
+                    showticksuffix="last",
+                    dtick=5)
+            ),
+        ))
+
+        fig.update_layout(
+            geo=dict(
+                # scope='europe',
+                showland=True,
+                landcolor="rgb(212, 212, 212)",
+                subunitcolor="rgb(255, 255, 255)",
+                countrycolor="rgb(255, 255, 255)",
+                showlakes=True,
+                lakecolor="rgb(255, 255, 255)",
+                showsubunits=True,
+                showcountries=True,
+                projection=dict(
+                    type='natural earth'
+                ),
+            ),
+            # title='Total cost per kg H2 (Eur) for H2 required in Cologne, Germany',
+            font_color='black',
+            font_size=15,
+            font_family='Times New Roman'
+        )
+        fig.add_annotation(x=1.05, y=-0.08,
+                           text="Black locations represent transport routes that could not be calculated",
+                           showarrow=False)
+        fig.add_annotation(x=1, y=0.977,
+                           text="Cost",
+                           font=dict(
+                               size=18
+                           ),
+                           showarrow=False)
+
+        html = '<html><body>'
+        html += plotly.offline.plot(fig, output_type='div', include_plotlyjs='cdn')
+        html += '</body></html>'
+
+        plot_widget = QWebEngineView()
+        plot_widget.setHtml(html)
+        self.tab2_layout.addWidget(plot_widget)
+        plot_widget.resize(800, 600)
+        plot_widget.show()
 
     @staticmethod
     def create_port_coordinates(df_ports):
@@ -593,7 +792,7 @@ class fileselection(QWidget):
 
 def main():
     app = QApplication(sys.argv)
-    w = fileselection()
+    w = Visualizing()
     w.show()
     sys.exit(app.exec())
 
